@@ -78,7 +78,7 @@ def chars_to_onehot(text: str, char_to_idx: dict) -> Tensor:
     return result
 
 
-def chars_to_onehot(embedded_text: Tensor, idx_to_char: dict) -> str:
+def onehot_to_chars(embedded_text: Tensor, idx_to_char: dict) -> str:
     """
     Reverses the embedding of a text sequence, producing back the original
     sequence as a string.
@@ -91,11 +91,11 @@ def chars_to_onehot(embedded_text: Tensor, idx_to_char: dict) -> str:
     # TODO: Implement the reverse-embedding.
     # ====== YOUR CODE: ======
     char_indices = torch.argmax(embedded_text, dim=1)
-    original_text = "".join([idx_to_char[idx.item()] for idx in char_indices])
-    result = original_text
+
+    result = "".join([idx_to_char.get(idx.item()) for idx in char_indices])
+
     # ========================
     return result
-
 
 def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device="cpu"):
     """
@@ -121,7 +121,17 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     #  3. Create the labels tensor in a similar way and convert to indices.
     #  Note that no explicit loops are required to implement this function.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    onehot_text = chars_to_onehot(text, char_to_idx).to(device)
+
+    num_samples = (onehot_text.size(0) - 1) // seq_len
+
+    samples = onehot_text[:num_samples * seq_len].view(num_samples, seq_len, -1)
+    labels = torch.tensor(
+        [char_to_idx[char] for char in text[1:num_samples * seq_len + 1]],
+        dtype=torch.long
+    ).view(num_samples, seq_len).to(device)
+
     # ========================
     return samples, labels
 
@@ -137,7 +147,10 @@ def hot_softmax(y, dim=0, temperature=1.0):
     """
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    scaled_y = y / temperature
+    max_y, _ = torch.max(scaled_y, dim=dim, keepdim=True)
+    exp_y = torch.exp(scaled_y)
+    result = exp_y / torch.sum(exp_y, dim=dim, keepdim=True)
     # ========================
     return result
 
@@ -173,7 +186,39 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  necessary for this. Best to disable tracking for speed.
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    assert len(start_sequence) < n_chars
+    device = next(model.parameters()).device
+    char_to_idx, idx_to_char = char_maps
+    out_text = start_sequence
+
+    # Initialize hidden state
+    hidden = None
+
+    # Disable gradient tracking for efficiency
+    with torch.no_grad():
+        # Convert start_sequence to one-hot tensor
+        x = chars_to_onehot(start_sequence, char_to_idx)
+        x = x.unsqueeze(0).to(device)  # Add batch dimension and move to device
+
+        for _ in range(n_chars - len(start_sequence)):
+            # Forward pass through the model
+            y_pred, hidden = model(x, hidden)
+
+            # Apply softmax with temperature T
+            y_pred = hot_softmax(y_pred.squeeze(0) / T, dim=1)
+
+            # Sample the next character
+            next_char_idx = torch.multinomial(y_pred, 1).item()
+            next_char = idx_to_char[next_char_idx]
+
+            # Append the predicted character to the output text
+            out_text += next_char
+
+            # Update input for the next iteration
+            x = chars_to_onehot(next_char, char_to_idx)
+            x = x.unsqueeze(0).to(device)  # Add batch dimension and move to device
+
     # ========================
 
     return out_text
@@ -206,7 +251,12 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         #  you can drop it.
         idx = None  # idx should be a 1-d list of indices.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        dataset_size = len(self.dataset)
+
+        num_batches = dataset_size // self.batch_size
+
+        idx = [i for i in range(num_batches * self.batch_size)]
+
         # ========================
         return iter(idx)
 

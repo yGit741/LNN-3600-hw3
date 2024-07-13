@@ -4,10 +4,10 @@ Use this module to write your answers to the questions in the notebook.
 Note: Inside the answer strings you can use Markdown format and also LaTeX
 math (delimited with $$).
 """
-student_name_1 = '' # string
-student_ID_1 = '' # string
-student_name_2 = '' # string
-student_ID_2 = '' # string
+student_name_1 = 'Yonatan Greenshpan' # string
+student_ID_1 = '204266191' # string
+student_name_2 = 'David Bendayan' # string
+student_ID_2 = '033530700' # string
 
 # ==============
 # Part 1 answers
