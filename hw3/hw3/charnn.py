@@ -147,10 +147,12 @@ def hot_softmax(y, dim=0, temperature=1.0):
     """
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
+
     scaled_y = y / temperature
-    max_y, _ = torch.max(scaled_y, dim=dim, keepdim=True)
-    exp_y = torch.exp(scaled_y)
-    result = exp_y / torch.sum(exp_y, dim=dim, keepdim=True)
+    exp_scaled_y = torch.exp(scaled_y)
+    softmax_denominator = exp_scaled_y.sum(dim=dim, keepdim=True)
+    result = exp_scaled_y / softmax_denominator
+
     # ========================
     return result
 
@@ -187,37 +189,16 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
 
-    assert len(start_sequence) < n_chars
-    device = next(model.parameters()).device
-    char_to_idx, idx_to_char = char_maps
-    out_text = start_sequence
-
-    # Initialize hidden state
-    hidden = None
-
-    # Disable gradient tracking for efficiency
     with torch.no_grad():
-        # Convert start_sequence to one-hot tensor
-        x = chars_to_onehot(start_sequence, char_to_idx)
-        x = x.unsqueeze(0).to(device)  # Add batch dimension and move to device
+        h = None
+        for i in range(n_chars - len(start_sequence)):
+            x = chars_to_onehot(out_text[-1], char_to_idx).unsqueeze(0).to(device).float()
+            y, h = model(x, h)
+            y = y.squeeze(0)
+            y = hot_softmax(y, dim=0, temperature=T)
+            next_char_idx = torch.multinomial(y, 1).item()
+            out_text += idx_to_char[next_char_idx]
 
-        for _ in range(n_chars - len(start_sequence)):
-            # Forward pass through the model
-            y_pred, hidden = model(x, hidden)
-
-            # Apply softmax with temperature T
-            y_pred = hot_softmax(y_pred.squeeze(0) / T, dim=1)
-
-            # Sample the next character
-            next_char_idx = torch.multinomial(y_pred, 1).item()
-            next_char = idx_to_char[next_char_idx]
-
-            # Append the predicted character to the output text
-            out_text += next_char
-
-            # Update input for the next iteration
-            x = chars_to_onehot(next_char, char_to_idx)
-            x = x.unsqueeze(0).to(device)  # Add batch dimension and move to device
 
     # ========================
 

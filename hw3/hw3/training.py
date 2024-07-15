@@ -10,7 +10,6 @@ import torch.nn as nn
 
 from cs236781.train_results import FitResult, BatchResult, EpochResult
 
-
 def freeze_model_except_for_the_last_2_linear_layers(model: nn.Module) -> None:
     # You can change the header of this function if you wish to add more parameters.
     raise NotImplementedError()
