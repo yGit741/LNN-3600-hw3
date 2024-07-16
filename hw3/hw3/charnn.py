@@ -148,10 +148,35 @@ def hot_softmax(y, dim=0, temperature=1.0):
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
 
+    # scaled_y = y / temperature
+    # exp_scaled_y = torch.exp(scaled_y)
+    # softmax_denominator = exp_scaled_y.sum(dim=dim, keepdim=True)
+    # result = exp_scaled_y / softmax_denominator
+    # Ensure temperature is a positive number to prevent division by zero or extreme values
+    temperature = max(temperature, 1e-6)  # minimum temperature to avoid extreme values
+    # print("y: ", y)
+
+    # Scale the input by 1/temperature
     scaled_y = y / temperature
-    exp_scaled_y = torch.exp(scaled_y)
-    softmax_denominator = exp_scaled_y.sum(dim=dim, keepdim=True)
-    result = exp_scaled_y / softmax_denominator
+
+    max_y = torch.max(scaled_y, dim=dim, keepdim=True)[0]
+    shifted_y = scaled_y - max_y
+    exp_shifted_y = torch.exp(shifted_y)
+
+    # print("scaled_y: ",scaled_y)
+    # Compute softmax along the specified dimension
+    # exp_scaled_y = torch.exp(scaled_y)
+    # print("exp_scaled_y: ",exp_scaled_y)
+    softmax_denominator = exp_shifted_y.sum(dim=dim, keepdim=True)
+    # print("softmax_denominator: ",softmax_denominator)
+    result = exp_shifted_y / softmax_denominator
+    # print("result-typer: ", type(result))
+    # print("result: ", result)
+
+    # print(result)
+    # Check for NaN or Inf values in the result
+    if torch.isnan(result).any() or torch.isinf(result).any() or (result < 0).any():
+        raise RuntimeError("Softmax output contains NaN, Inf, or negative values.")
 
     # ========================
     return result
@@ -193,10 +218,17 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
         h = None
         for i in range(n_chars - len(start_sequence)):
             x = chars_to_onehot(out_text[-1], char_to_idx).unsqueeze(0).to(device).float()
+            # print("x: ", x)
             y, h = model(x, h)
+            # print("y_model: ", y)
+            # print("h: ", h)
             y = y.squeeze(0)
-            y = hot_softmax(y, dim=0, temperature=T)
+            # print("y_squeeze: ", y)
+            y = hot_softmax(y, dim=1, temperature=T)
+            # print("y: ", y)
             next_char_idx = torch.multinomial(y, 1).item()
+            # print("next_char_idx: ", next_char_idx)
+
             out_text += idx_to_char[next_char_idx]
 
 
@@ -324,6 +356,8 @@ class MultilayerGRU(nn.Module):
         # TODO: READ THIS SECTION!!
         # ====== YOUR CODE: ======
         # Loop over layers of the model
+
+
         for layer_idx in range(self.n_layers):
             wxz = self.layer_params[layer_idx]["wxz"]
             whz = self.layer_params[layer_idx]["whz"]

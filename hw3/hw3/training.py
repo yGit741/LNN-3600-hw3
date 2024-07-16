@@ -10,6 +10,7 @@ import torch.nn as nn
 
 from cs236781.train_results import FitResult, BatchResult, EpochResult
 
+
 def freeze_model_except_for_the_last_2_linear_layers(model: nn.Module) -> None:
     # You can change the header of this function if you wish to add more parameters.
     raise NotImplementedError()
@@ -259,7 +260,26 @@ class RNNTrainer(Trainer):
         #  - Update params
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        self.optimizer.zero_grad()
+
+        y_pred, _ = self.model(x)
+
+        y_pred = y_pred.view(-1, y_pred.size(-1))
+        y = y.view(-1)
+        loss = self.loss_fn(y_pred, y)
+
+        loss.backward()
+
+        nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
+        self.optimizer.step()
+
+        _, predicted = torch.max(y_pred, 1)
+        correct = (predicted == y).float()  # Convert to float for division
+        num_correct = correct.sum()
+
+
         # ========================
 
         # Note: scaling num_correct by seq_len because each sample has seq_len

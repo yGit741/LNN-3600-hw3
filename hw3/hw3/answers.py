@@ -42,23 +42,26 @@ def part1_generation_params():
 
 
 part1_q1 = r"""
-**Your answer:**
-
+**Your answer:**  
+There are several reason why we prefer to train our RNN on sequences and not on the whole text. First, we have memory constraints and feeding the entire corpus at once can exceed the available memory. In addition, RNN has difficulties handling long dependencies and spliting into chunk help model to focus on more managable chunks. finally, the sequencing allow us using optimization technique like mini-batch  gradient descent and truncated backpropagation.
 """
 
 part1_q2 = r"""
-**Your answer:**
-
+**Your answer:**  
+In our RNN, we carried over the hidden state from one sequence to the next sequence during the training, and reset the state only by the end of each epoch. For example: we tarin on sequence 1 and the initial state is $h_0$ and the output is $h_1$ and in sequence 2 the initial hidden state is $h_1$ and the output is $h_2$ - as we can see we have the overlapping of $h_1$ that in a transitive manner crate kind of long term memory.   
+ 
 """
 
 part1_q3 = r"""
-**Your answer:**
-
+**Your answer:**  
+Not shuffling the order of batches when training RNNs allows for the hidden state to carry over from one sequence to the next within an epoch, preserving context and continuity essential for learning long-term dependencies in the data.
 """
 
 part1_q4 = r"""
-**Your answer:**
-
+**Your answer:**  
+1. Lowering the temperature makes the model's predictions more confident by sharpening the probability distribution, leading to more coherent and sensible text generation.  
+2. When the temperature is very high, the probability distribution becomes more uniform, resulting in more random and less coherent text because the model is less certain about its predictions.  
+3. When the temperature is very low, the probability distribution becomes peaked, making the model highly confident in its predictions. This can lead to repetitive and deterministic text as the model consistently chooses the highest probability options.  
 
 """
 # ==============
