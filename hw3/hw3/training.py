@@ -108,10 +108,28 @@ class Trainer(abc.ABC):
             #  - Implement early stopping. This is a very useful and
             #    simple regularization technique that is highly recommended.
             # ====== YOUR CODE: ======
-            
-            raise NotImplementedError()
 
-            # ========================
+            # current epoch training process
+            train_results = self.train_epoch(dl_train, verbose=verbose)
+            train_loss.append(torch.mean(torch.tensor(train_results.losses)))
+            train_acc.append(train_results.accuracy)
+            test_result = self.test_epoch(dl_test, verbose=verbose)
+            test_loss.append(torch.mean(torch.tensor(test_result.losses)))
+            test_acc.append(test_result.accuracy)
+            actual_num_epochs += 1
+
+            # checkpoints and breaking points
+            if best_acc is None or test_result.accuracy > best_acc:
+                best_acc = test_result.accuracy
+                epochs_without_improvement = 0
+                if checkpoints is not None:
+                    save_checkpoint = True
+            else:
+                epochs_without_improvement += 1
+            if early_stopping is not None:
+                if epochs_without_improvement >= early_stopping:
+                    self._print("early stopping")
+                    break
 
             # Save model checkpoint if requested
             if save_checkpoint and checkpoint_filename is not None:
@@ -126,7 +144,7 @@ class Trainer(abc.ABC):
                 )
 
             if post_epoch_fn:
-                post_epoch_fn(epoch, train_result, test_result, verbose)
+                post_epoch_fn(epoch, train_results, test_result, verbose)
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
 
@@ -161,38 +179,6 @@ class Trainer(abc.ABC):
         :return: A BatchResult containing the value of the loss function and
             the number of correctly classified samples in the batch.
         """
-        # # Unpack the batch data
-        # inputs, labels = batch
-        #
-        # # Move data to the device
-        # inputs = inputs.to(self.device)
-        # labels = labels.to(self.device)
-        #
-        # # Zero the parameter gradients
-        # self.optimizer.zero_grad()
-        #
-        # # Forward pass
-        # outputs = self.model(inputs)
-        #
-        # # Compute loss
-        # loss = self.loss_fn(outputs, labels)
-        #
-        # # Backward pass
-        # loss.backward()
-        #
-        # # Clip gradients (optional)
-        # nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-        #
-        # # Optimize
-        # self.optimizer.step()
-        #
-        # # Compute number of correct predictions
-        # _, predicted = torch.max(outputs, 1)
-        # correct = (predicted == labels).sum().item()
-        #
-        # # Calculate accuracy
-        # num_samples = labels.size(0)
-        # accuracy = correct / num_samples
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -270,11 +256,9 @@ class RNNTrainer(Trainer):
     def train_epoch(self, dl_train: DataLoader, **kw):
         # TODO: Implement modifications to the base method, if needed.
         # ====== YOUR CODE: ======
-
         self.hidden_state = None
         self.model.train()
         torch.enable_grad()
-            
         # ========================
         return super().train_epoch(dl_train, **kw)
 
@@ -299,40 +283,15 @@ class RNNTrainer(Trainer):
         #  - Update params
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
-
-        # self.optimizer.zero_grad()
-        #
-        # y_pred, _ = self.model(x)
-        #
-        # y_pred = y_pred.view(-1, y_pred.size(-1))
-        # y = y.view(-1)
-        # loss = self.loss_fn(y_pred, y)
-        #
-        # loss.backward()
-        #
-        # nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-        #
-        # self.optimizer.step()
-        #
-        # _, predicted = torch.max(y_pred, 1)
-        # correct = (predicted == y).float()  # Convert to float for division
-        # num_correct = correct.sum()
-
         self.optimizer.zero_grad()
-        pred_y,hidden_state  = self.model(x,self.hidden_state)
-
+        pred_y, hidden_state = self.model(x, self.hidden_state)
         self.hidden_state = hidden_state.detach()
-
-        loss = self.loss_fn(pred_y.view(-1,pred_y.shape[2]),y.view(-1))
-        loss.backward()  # Backward pass
-        self.optimizer.step()  # Update weights
-
+        loss = self.loss_fn(pred_y.view(-1, pred_y.shape[2]), y.view(-1))
+        loss.backward()
+        self.optimizer.step()
         with torch.no_grad():
-
-            classified_y = torch.argmax(pred_y,dim=2)
+            classified_y = torch.argmax(pred_y, dim=2)
             num_correct = torch.sum(y == classified_y)
-
-
         # ========================
 
         # Note: scaling num_correct by seq_len because each sample has seq_len
