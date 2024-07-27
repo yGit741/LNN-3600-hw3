@@ -41,11 +41,8 @@ def remove_chars(text: str, chars_to_remove):
     """
     # TODO: Implement according to the docstring.
     # ====== YOUR CODE: ======
-    text_clean = text
-    n_removed = 0
-    for char in chars_to_remove:
-        n_removed += text_clean.count(char)
-        text_clean.replace(char, "")
+    text_clean = ''.join(char for char in text if char not in chars_to_remove)
+    n_removed = len(text) - len(text_clean)
     # ========================
     return text_clean, n_removed
 
@@ -135,7 +132,7 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     # ========================
     return samples, labels
 
-
+#
 def hot_softmax(y, dim=0, temperature=1.0):
     """
     A softmax which first scales the input by 1/temperature and
@@ -148,36 +145,8 @@ def hot_softmax(y, dim=0, temperature=1.0):
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
 
-    # scaled_y = y / temperature
-    # exp_scaled_y = torch.exp(scaled_y)
-    # softmax_denominator = exp_scaled_y.sum(dim=dim, keepdim=True)
-    # result = exp_scaled_y / softmax_denominator
-    # Ensure temperature is a positive number to prevent division by zero or extreme values
-    temperature = max(temperature, 1e-6)  # minimum temperature to avoid extreme values
-    # print("y: ", y)
-
-    # Scale the input by 1/temperature
-    scaled_y = y / temperature
-
-    max_y = torch.max(scaled_y, dim=dim, keepdim=True)[0]
-    shifted_y = scaled_y - max_y
-    exp_shifted_y = torch.exp(shifted_y)
-
-    # print("scaled_y: ",scaled_y)
-    # Compute softmax along the specified dimension
-    # exp_scaled_y = torch.exp(scaled_y)
-    # print("exp_scaled_y: ",exp_scaled_y)
-    softmax_denominator = exp_shifted_y.sum(dim=dim, keepdim=True)
-    # print("softmax_denominator: ",softmax_denominator)
-    result = exp_shifted_y / softmax_denominator
-    # print("result-typer: ", type(result))
-    # print("result: ", result)
-
-    # print(result)
-    # Check for NaN or Inf values in the result
-    if torch.isnan(result).any() or torch.isinf(result).any() or (result < 0).any():
-        raise RuntimeError("Softmax output contains NaN, Inf, or negative values.")
-
+    scaled_logits = y / temperature
+    result = torch.nn.functional.softmax(scaled_logits, dim=dim)
     # ========================
     return result
 
@@ -264,11 +233,11 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         #  you can drop it.
         idx = None  # idx should be a 1-d list of indices.
         # ====== YOUR CODE: ======
-        dataset_size = len(self.dataset)
 
-        num_batches = dataset_size // self.batch_size
-
-        idx = [i for i in range(num_batches * self.batch_size)]
+        idx = []
+        num_batches = len(self) // self.batch_size
+        for i in range(num_batches):
+            idx += [i + j * num_batches for j in range(self.batch_size)]
 
         # ========================
         return iter(idx)

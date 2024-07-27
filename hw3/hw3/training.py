@@ -13,11 +13,16 @@ from cs236781.train_results import FitResult, BatchResult, EpochResult
 
 def freeze_model_except_for_the_last_2_linear_layers(model: nn.Module) -> None:
     # You can change the header of this function if you wish to add more parameters.
-    raise NotImplementedError()
+    for param in model.parameters():
+        param.requires_grad = False
+
+    model.classifier.requires_grad = True
+    model.pre_classifier.requires_grad = True
 
 
 def unfreeze_all_model_parameters(model: nn.Module) -> None:
-    raise NotImplementedError()
+    for param in model.parameters():
+        param.requires_grad = False
 
 
 class Trainer(abc.ABC):
@@ -156,7 +161,39 @@ class Trainer(abc.ABC):
         :return: A BatchResult containing the value of the loss function and
             the number of correctly classified samples in the batch.
         """
-        raise NotImplementedError()
+        # # Unpack the batch data
+        # inputs, labels = batch
+        #
+        # # Move data to the device
+        # inputs = inputs.to(self.device)
+        # labels = labels.to(self.device)
+        #
+        # # Zero the parameter gradients
+        # self.optimizer.zero_grad()
+        #
+        # # Forward pass
+        # outputs = self.model(inputs)
+        #
+        # # Compute loss
+        # loss = self.loss_fn(outputs, labels)
+        #
+        # # Backward pass
+        # loss.backward()
+        #
+        # # Clip gradients (optional)
+        # nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+        #
+        # # Optimize
+        # self.optimizer.step()
+        #
+        # # Compute number of correct predictions
+        # _, predicted = torch.max(outputs, 1)
+        # correct = (predicted == labels).sum().item()
+        #
+        # # Calculate accuracy
+        # num_samples = labels.size(0)
+        # accuracy = correct / num_samples
+        raise NotImplementedError
 
     @abc.abstractmethod
     def test_batch(self, batch) -> BatchResult:
@@ -233,8 +270,10 @@ class RNNTrainer(Trainer):
     def train_epoch(self, dl_train: DataLoader, **kw):
         # TODO: Implement modifications to the base method, if needed.
         # ====== YOUR CODE: ======
-        
-        self.hidden_state = None    
+
+        self.hidden_state = None
+        self.model.train()
+        torch.enable_grad()
             
         # ========================
         return super().train_epoch(dl_train, **kw)
@@ -261,23 +300,37 @@ class RNNTrainer(Trainer):
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
 
+        # self.optimizer.zero_grad()
+        #
+        # y_pred, _ = self.model(x)
+        #
+        # y_pred = y_pred.view(-1, y_pred.size(-1))
+        # y = y.view(-1)
+        # loss = self.loss_fn(y_pred, y)
+        #
+        # loss.backward()
+        #
+        # nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+        #
+        # self.optimizer.step()
+        #
+        # _, predicted = torch.max(y_pred, 1)
+        # correct = (predicted == y).float()  # Convert to float for division
+        # num_correct = correct.sum()
+
         self.optimizer.zero_grad()
+        pred_y,hidden_state  = self.model(x,self.hidden_state)
 
-        y_pred, _ = self.model(x)
+        self.hidden_state = hidden_state.detach()
 
-        y_pred = y_pred.view(-1, y_pred.size(-1))
-        y = y.view(-1)
-        loss = self.loss_fn(y_pred, y)
+        loss = self.loss_fn(pred_y.view(-1,pred_y.shape[2]),y.view(-1))
+        loss.backward()  # Backward pass
+        self.optimizer.step()  # Update weights
 
-        loss.backward()
+        with torch.no_grad():
 
-        nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-
-        self.optimizer.step()
-
-        _, predicted = torch.max(y_pred, 1)
-        correct = (predicted == y).float()  # Convert to float for division
-        num_correct = correct.sum()
+            classified_y = torch.argmax(pred_y,dim=2)
+            num_correct = torch.sum(y == classified_y)
 
 
         # ========================
@@ -299,7 +352,11 @@ class RNNTrainer(Trainer):
             #  - Loss calculation
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            pred_y, self.hidden_state  = self.model(x, self.hidden_state)
+            loss = self.loss_fn(pred_y.view(-1,pred_y.shape[2]),y.view(-1))
+            classified_y = torch.argmax(pred_y,dim=2)
+            num_correct = torch.sum(y == classified_y)
+            # raise NotImplementedError()
             # ========================
 
         return BatchResult(loss.item(), num_correct.item() / seq_len)
@@ -375,8 +432,11 @@ class FineTuningTrainer(Trainer):
     def train_batch(self, batch) -> BatchResult:
         
         input_ids = batch["input_ids"].to(self.device)
+        print(input_ids)
         attention_masks = batch["attention_mask"]
+        print(attention_masks)
         labels= batch["label"]
+        print(labels)
         # TODO:
         #  fill out the training loop.
         # ====== YOUR CODE: ======
