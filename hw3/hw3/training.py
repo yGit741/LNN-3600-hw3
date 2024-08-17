@@ -421,8 +421,8 @@ class FineTuningTrainer(Trainer):
 
     def test_batch(self, batch) -> BatchResult:
         input_ids = batch["input_ids"].to(self.device)
-        attention_masks = batch["attention_mask"]
-        labels = batch["label"]
+        attention_masks = batch["attention_mask"].to(self.device)
+        labels = batch["label"].to(self.device)
 
         with torch.no_grad():
             # TODO:
@@ -434,4 +434,4 @@ class FineTuningTrainer(Trainer):
             num_correct = torch.sum(labels == predicted_labels)
             # raise NotImplementedError()
             # ========================
-        return BatchResult(loss, num_correct)
+        return BatchResult(loss.item(), num_correct.item())
