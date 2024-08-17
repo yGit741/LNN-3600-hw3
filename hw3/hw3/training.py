@@ -292,9 +292,14 @@ class RNNTrainer(Trainer):
         #  - Update params
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
+        if self.hidden_state is None:
+            self.hidden_state = self.model.init_hidden_state(x.size(0), self.device)
+
         self.optimizer.zero_grad()
         pred_y, hidden_state = self.model(x, self.hidden_state)
-        self.hidden_state = hidden_state.detach()
+
+        self.hidden_state = hidden_state.detach().to(self.device)
+
         loss = self.loss_fn(pred_y.view(-1, pred_y.shape[2]), y.view(-1))
         loss.backward()
         self.optimizer.step()
@@ -313,6 +318,9 @@ class RNNTrainer(Trainer):
         y = y.to(self.device, dtype=torch.long)  # (B,S)
         seq_len = y.shape[1]
 
+        if self.hidden_state is None:
+            self.hidden_state = self.model.init_hidden_state(x.size(0), self.device)
+
         with torch.no_grad():
             # TODO:
             #  Evaluate the RNN model on one batch of data.
@@ -321,6 +329,9 @@ class RNNTrainer(Trainer):
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
             pred_y, self.hidden_state  = self.model(x, self.hidden_state)
+
+            self.hidden_state = self.hidden_state.detach().to(self.device)
+
             loss = self.loss_fn(pred_y.view(-1,pred_y.shape[2]),y.view(-1))
             classified_y = torch.argmax(pred_y,dim=2)
             num_correct = torch.sum(y == classified_y)
