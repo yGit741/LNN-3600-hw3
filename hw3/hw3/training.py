@@ -400,7 +400,7 @@ class FineTuningTrainer(Trainer):
     def train_batch(self, batch) -> BatchResult:
         input_ids = batch["input_ids"].to(self.device)
         attention_masks = batch["attention_mask"].to(self.device)
-        labels = batch["label"]
+        labels = batch["label"].to(self.device)
         # TODO:
         #  fill out the training loop.
         # ====== YOUR CODE: ======
