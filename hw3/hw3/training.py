@@ -417,7 +417,7 @@ class FineTuningTrainer(Trainer):
 
         # ========================
 
-        return BatchResult(loss, num_correct)
+        return BatchResult(loss.item(), num_correct.item())
 
     def test_batch(self, batch) -> BatchResult:
         input_ids = batch["input_ids"].to(self.device)
