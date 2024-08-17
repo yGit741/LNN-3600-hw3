@@ -145,8 +145,8 @@ def hot_softmax(y, dim=0, temperature=1.0):
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
 
-    scaled_logits = y / temperature
-    result = torch.nn.functional.softmax(scaled_logits, dim=dim)
+    scaled = y / temperature
+    result = torch.nn.functional.softmax(scaled, dim=dim)
     # ========================
     return result
 
@@ -197,7 +197,6 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
             # print("y: ", y)
             next_char_idx = torch.multinomial(y, 1).item()
             # print("next_char_idx: ", next_char_idx)
-
             out_text += idx_to_char[next_char_idx]
 
 
@@ -235,9 +234,9 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         # ====== YOUR CODE: ======
 
         idx = []
-        num_batches = len(self) // self.batch_size
-        for i in range(num_batches):
-            idx += [i + j * num_batches for j in range(self.batch_size)]
+        batches = len(self) // self.batch_size
+        for i in range(batches):
+            idx += [i + j * batches for j in range(self.batch_size)]
 
         # ========================
         return iter(idx)

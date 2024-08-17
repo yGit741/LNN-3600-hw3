@@ -13,16 +13,24 @@ from cs236781.train_results import FitResult, BatchResult, EpochResult
 
 def freeze_model_except_for_the_last_2_linear_layers(model: nn.Module) -> None:
     # You can change the header of this function if you wish to add more parameters.
-    for param in model.parameters():
-        param.requires_grad = False
+    # for param in model.parameters():
+    #     param.requires_grad = False
+    #
+    # model.classifier.requires_grad = True
+    # model.pre_classifier.requires_grad = True
 
-    model.classifier.requires_grad = True
-    model.pre_classifier.requires_grad = True
+    for param in model.pre_classifier.parameters():
+        param.requires_grad = False
+    for param in model.classifier.parameters():
+        param.requires_grad = True
 
 
 def unfreeze_all_model_parameters(model: nn.Module) -> None:
+    # for param in model.parameters():
+    #     param.requires_grad = False
+
     for param in model.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
 
 
 class Trainer(abc.ABC):
@@ -386,36 +394,111 @@ class TransformerEncoderTrainer(Trainer):
 
 
 
+# class FineTuningTrainer(Trainer):
+#
+#     def train_batch(self, batch) -> BatchResult:
+#
+#         input_ids = batch["input_ids"].to(self.device)
+#         print(input_ids)
+#         attention_masks = batch["attention_mask"]
+#         print(attention_masks)
+#         labels= batch["label"]
+#         print(labels)
+#         # TODO:
+#         #  fill out the training loop.
+#         # ====== YOUR CODE: ======
+#
+#         # self.optimizer.zero_grad()
+#         # outputs = self.model(input_ids=input_ids, attention_mask=attention_masks, labels=labels)
+#         # loss = outputs.loss
+#         # loss.backward()
+#         # self.optimizer.step()
+#         #
+#         # preds = torch.argmax(outputs.logits, dim=1)
+#         # num_correct = torch.sum(preds == labels)
+#
+#         self.optimizer.zero_grad()
+#
+#         pred_labels  = self.model(input_ids,attention_masks)
+#
+#         loss = torch.nn.CrossEntropyLoss()(pred_labels.logits, labels)
+#         loss.backward()  # Backward pass
+#         self.optimizer.step()  # Update weights
+#
+#         with torch.no_grad():
+#             classified_labels = torch.argmax(pred_labels.logits,dim=1)
+#             num_correct = torch.sum(labels == classified_labels)
+#
+#         # raise NotImplementedError()
+#
+#         # ========================
+#
+#         return BatchResult(loss, num_correct)
+#
+#     def test_batch(self, batch) -> BatchResult:
+#
+#         input_ids = batch["input_ids"].to(self.device)
+#         attention_masks = batch["attention_mask"]
+#         labels= batch["label"]
+#
+#         with torch.no_grad():
+#             # TODO:
+#             #  fill out the training loop.
+#             # ====== YOUR CODE: ======
+#             # outputs = self.model(input_ids=input_ids, attention_mask=attention_masks, labels=labels)
+#             # loss = outputs.loss
+#             #
+#             # preds = torch.argmax(outputs.logits, dim=1)
+#             # num_correct = torch.sum(preds == labels)
+#
+#             pred_labels = self.model(input_ids, attention_masks)
+#
+#             loss = torch.nn.CrossEntropyLoss()(pred_labels.logits, labels)
+#
+#             classified_labels = torch.argmax(pred_labels.logits, dim=1)
+#             num_correct = torch.sum(labels == classified_labels)
+#
+#
+#             # ========================
+#         return BatchResult(loss, num_correct)
+
 class FineTuningTrainer(Trainer):
-    
+
     def train_batch(self, batch) -> BatchResult:
-        
         input_ids = batch["input_ids"].to(self.device)
-        print(input_ids)
         attention_masks = batch["attention_mask"]
-        print(attention_masks)
-        labels= batch["label"]
-        print(labels)
+        labels = batch["label"]
         # TODO:
         #  fill out the training loop.
         # ====== YOUR CODE: ======
 
-        raise NotImplementedError()
-        
+        self.optimizer.zero_grad()
+        pred_labels = self.model(input_ids, attention_masks)
+        loss = torch.nn.CrossEntropyLoss()(pred_labels.logits, labels)
+        loss.backward()  # Backward pass
+        self.optimizer.step()  # Update weights
+        with torch.no_grad():
+            classified_labels = torch.argmax(pred_labels.logits, dim=1)
+            num_correct = torch.sum(labels == classified_labels)
+
+
         # ========================
-        
+
         return BatchResult(loss, num_correct)
-        
+
     def test_batch(self, batch) -> BatchResult:
-        
         input_ids = batch["input_ids"].to(self.device)
         attention_masks = batch["attention_mask"]
-        labels= batch["label"]
-        
+        labels = batch["label"]
+
         with torch.no_grad():
             # TODO:
             #  fill out the training loop.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            predictions = self.model(input_ids, attention_masks)
+            loss = torch.nn.CrossEntropyLoss()(predictions.logits, labels)
+            predicted_labels = torch.argmax(predictions.logits, dim=1)
+            num_correct = torch.sum(labels == predicted_labels)
+            # raise NotImplementedError()
             # ========================
         return BatchResult(loss, num_correct)
