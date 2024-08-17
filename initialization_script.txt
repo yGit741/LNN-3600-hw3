@@ -1,0 +1,13 @@
+
+
+
+curl -fsSLO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+conda config --set channel_priority strict
+conda config --set auto_activate_base False
+conda env update -f environment.yml -n cs236781-hw
+conda activate cs236781-hw
+
+sudo apt install git
+git clone "https://github.com/yGit741/LNN-3600-hw3.git"
+cd LNN-3600-hw3
